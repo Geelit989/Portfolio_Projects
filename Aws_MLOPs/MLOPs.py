@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[2]:
 
 
 # Check if running in a Jupyter notebook
@@ -25,7 +25,7 @@ else:
     subprocess.call(['pip', 'install', 'fastparquet'])
 
 
-# In[2]:
+# In[23]:
 
 
 import numpy as np
@@ -37,33 +37,52 @@ import matplotlib.pyplot as plt
 
 # ## THIS IS THE START OF MY END TO END MLOPS RESEARCH PROJECT
 
-# In[3]:
+# In[13]:
 
 
+# Change url variable depending on location
 url_macbook = '/Users/macbookpro/Desktop/aws-docs/Portfolio_Projects/Aws_MLOPs/nba-data/seasons_total.pq'
 url_imac = '/Users/duk3y2/Desktop/aws-e2e/Portfolio_Projects/Aws_MLOPs/nba-data/seasons_total.pq'
 x = pd.read_parquet(url_imac)
 
 
-# In[4]:
+# In[19]:
 
 
 x
 
 
-# In[5]:
+# In[6]:
 
 
 x.shape
 
 
-# In[6]:
+# In[18]:
+
+
+x['year'] = pd.to_datetime(x['year'],format='%Y').dt.year
+
+
+# In[ ]:
+
+
+
+
+
+# In[20]:
+
+
+x.info()
+
+
+# In[21]:
 
 
 x.describe().T
 
 
-# In[7]:
+# In[9]:
 
 
 # Loop through field goal percent column and set nan to 0
@@ -72,12 +91,34 @@ for i in range(len(x)):
         x.loc[i,'FT%'] = 0
 
 
-# In[8]:
+# In[82]:
 
 
-x.plot(x = 'FT%',
-       y = 'FTA',
-       kind='scatter',
-       figsize = (9,9),
-)
+plt.style.use('seaborn-v0_8-colorblind')
+fig,axes = plt.subplots(nrows=7,ncols=4,figsize=(30,30))
+
+x_2023 = x[x['year']==2023]
+x_2023 = x_2023.drop(['Rk','Player','year','team','team_retcon'],axis=1)
+
+# Iterate through each column and create a histogram plot
+for i, col in enumerate(x_2023.columns):
+    row_index = i // 4  # Calculate the row index for the subplot
+    col_index = i % 4   # Calculate the column index for the subplot
+    ax = x_2023[col].plot(kind='hist', ax=axes[row_index, col_index],legend=True)
+    ax.set_title(col)  # Set the column name as the title
+
+# Remove any empty subplots
+for i in range(x_2023.shape[1], 7 * 4):
+    fig.delaxes(axes.flatten()[i])
+
+# plt.tight_layout()
 plt.show()
+
+# x_2023.plot(
+#     ax=axes,
+#     subplots=True,
+#     kind='hist',
+# )
+# ax.set_xlabel('Points')
+# ax.set_title('Distribution of Points Scored in Year 2023')
+
