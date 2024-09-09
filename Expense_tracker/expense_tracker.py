@@ -12,6 +12,7 @@ import time
 welcome_message = "Hi and welcome to the Personal Finance Tracker App"
 line_break = "*" * 50
 
+
 def expense_func():
 	"""
 	Ask user for expense information and return a dictionary of the expense information
@@ -24,7 +25,7 @@ def expense_func():
 	category = input("What kind of expense would you like to track today? \n Food, Gas, Grocery, Utility, Rent, etc...")
 	amount = int(input(f"How much is the {category} cost? Enter a number. "))
 	date_str = input("What day did you make this expense? MMDDYYYY ->")
-	date = datetime.strptime(date_str, "%m%d%Y")
+	date = datetime.strptime(date_str, "%m%d%Y").date().isoformat()
 	description = input("Give a quick description of the expense.. ")
 	
 	expense_info.extend([category, amount, date, description])
@@ -37,9 +38,10 @@ def expense_func():
 	
 	return expense_dict, unique_id
 
+
 def save_as_json(exp_dict, unique_id):
 	"""
-	Save the expense information as a json file
+	Save the expense information as a json file to a StringIO buffer.
 	"""
 	global io
 	
@@ -58,23 +60,29 @@ def save_as_json(exp_dict, unique_id):
 	return io
 
 
-
-def table_of_expenses(exp_dict):
+def table_of_expenses(io):
 	"""
 	Show a table of expenses
 	"""
 	print("Here is a table of your expenses")
-	print(f"{'Date':<10} {'Category':<10} {'Amount':<10} {'Description':<20}")
+	print(f"\n{'Date':<16} {'Category':<10} {'Amount':<10} {'Description':<10}")
 	print(line_break)
 
-	for exp in exp_dict:
-		print(f"{exp['date']:<10} {exp['category']:<10} {exp['amount']:<10} {exp['description']:<20}")
+#	try:
+	de_io = json.loads(io.readlines()[0])
+	print(f"{de_io['date']:<16} {de_io['category']:<10} {de_io['amount']:<10} {de_io['description']:<10}")
+#	except json.decoder.JSONDecodeError as e:
+#		print('There was an issue loading the io records. ', e)
+		
 
 	
 	
 if __name__ == "__main__":
 	expense_dict, unique_id = expense_func()
 	io = save_as_json(expense_dict, unique_id)
-
-	for line in io:
-		print(line)
+#	try:
+	table_of_expenses(io)
+#	except Exception as e:
+#		print('there was an error with the table function. ', e)
+#	for line in io:
+#		print('-' * 38, '\n', line)
