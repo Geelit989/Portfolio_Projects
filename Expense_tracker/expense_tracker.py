@@ -8,6 +8,7 @@ from datetime import datetime
 import json
 from io import StringIO
 import time
+import re
 
 welcome_message = "Hi and welcome to the Personal Finance Tracker App"
 line_break = "*" * 50
@@ -22,10 +23,23 @@ def expense_func():
 	print(welcome_message)
 	
 	expense_info = []
+	# Validate category input
 	category = input("What kind of expense would you like to track today? \n Food, Gas, Grocery, Utility, Rent, etc...")
-	amount = int(input(f"How much is the {category} cost? Enter a number. "))
-	date_str = input("What day did you make this expense? MMDDYYYY ->")
+	while True:
+		try:
+			amount = float(input(f"How much is the {category} cost? Enter a number. "))
+			break
+		except ValueError:
+			print("Invalid input. Please enter a number.")
+	# Validate date input
+	while True:	
+		date_str = input("What day did you make this expense? MMDDYYYY ->")
+		match = re.match(r"(\d{2})(\d{2})(\d{4})", date_str)
+		if match == None:
+			raise ValueError("Invalid date format. Please enter a date in MMDDYYYY format.")
 	date = datetime.strptime(date_str, "%m%d%Y").date().isoformat()
+
+
 	description = input("Give a quick description of the expense.. ")
 	
 	expense_info.extend([category, amount, date, description])
@@ -68,11 +82,9 @@ def table_of_expenses(io):
 	print(f"\n{'Date':<16} {'Category':<10} {'Amount':<10} {'Description':<10}")
 	print(line_break)
 
-#	try:
 	de_io = json.loads(io.readlines()[0])
 	print(f"{de_io['date']:<16} {de_io['category']:<10} {de_io['amount']:<10} {de_io['description']:<10}")
-#	except json.decoder.JSONDecodeError as e:
-#		print('There was an issue loading the io records. ', e)
+
 		
 
 	
@@ -80,9 +92,6 @@ def table_of_expenses(io):
 if __name__ == "__main__":
 	expense_dict, unique_id = expense_func()
 	io = save_as_json(expense_dict, unique_id)
-#	try:
+
 	table_of_expenses(io)
-#	except Exception as e:
-#		print('there was an error with the table function. ', e)
-#	for line in io:
-#		print('-' * 38, '\n', line)
+
