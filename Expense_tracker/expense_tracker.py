@@ -33,12 +33,15 @@ def expense_func():
 			print("Invalid input. Please enter a number.")
 	# Validate date input
 	while True:	
-		date_str = input("What day did you make this expense? MMDDYYYY ->")
-		match = re.match(r"(\d{2})(\d{2})(\d{4})", date_str)
-		if match == None:
-			raise ValueError("Invalid date format. Please enter a date in MMDDYYYY format.")
-	date = datetime.strptime(date_str, "%m%d%Y").date().isoformat()
-
+		try:
+			date_str = input("What day did you make this expense? MMDDYYYY ->")
+			match = re.match(r"(\d{2})(\d{2})(\d{4})", date_str)
+			if not match:
+				raise ValueError("Invalid date format.")
+			date = datetime.strptime(date_str, "%m%d%Y").date().isoformat()
+			break
+		except ValueError as e:
+			print(f"Error: {e} Please use MMDDYYYY formatting!")
 
 	description = input("Give a quick description of the expense.. ")
 	
