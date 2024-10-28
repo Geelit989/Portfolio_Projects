@@ -1,0 +1,12 @@
+{
+    "to phone number": "+11234567890",
+	"send phone number": "+11234567890",
+	"job site": ["French Valley", "North Coast", "North Coast Segment 7"],
+	"rain fall probability": [0.50, 0.50, 0.50],
+	"rain fall amount": [0.10, 0.10, 0.10],
+	"lat": [33.49463, 33.1502, 33.0879],
+	"lon": [-117.1474, -117.3354, -117.3097],
+	"periodicity": [24]
+}
+
+
