@@ -4,8 +4,11 @@ import schedule
 import time
 import json
 import os
+import smtplib
 from datetime import datetime, timedelta
 from collections import defaultdict
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 
 class WeatherApp:
@@ -120,6 +123,43 @@ class WeatherApp:
             to=to_phone_number
         )
         print(f"Message sent: {message.sid}")
+
+    def send_sms_via_yahoo(self, to_number, message_body, yahoo_user, yahoo_password):
+        """
+        Send an SMS via Yahoo Mail's email-to-SMS gateway.
+
+        :param to_number: The recipient's phone number as a string (e.g., '1234567890').
+        :param message_body: The message text to send.
+        :param yahoo_user: The Yahoo email address for the SMTP server login.
+        :param yahoo_password: The password for the Yahoo email login.
+        """
+
+        yahoo_user = os.getenv('YMAIL_USER')
+        yahoo_password = os.getenv('YMAIL_KEY')
+
+        # T-Mobile's email-to-SMS gateway
+        to_email = f"{to_number}@vtext.com" # tmobile= tmomail.net, verizon= vtext.com
+
+        # Set up the email
+        msg = MIMEMultipart()
+        msg['From'] = yahoo_user
+        msg['To'] = to_email
+        msg['Subject'] = "Weather Alert"
+        msg.attach(MIMEText(message_body, 'plain'))
+
+        # Yahoo Mail SMTP server details
+        smtp_server = 'smtp.mail.yahoo.com'
+        smtp_port = 587 # 465 for SSL or 587 for TLS
+
+        # Connect to the SMTP server and send the message
+        try:
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()  # Secure the connection
+                server.login(yahoo_user, yahoo_password)  # Login to Yahoo account
+                server.sendmail(yahoo_user, to_email, msg.as_string())  # Send the email
+                print("Alert sent successfully!")
+        except Exception as e:
+            print(f"Failed to send alert: {e}")
 
     def run_daily_check(self):
         """
