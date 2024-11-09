@@ -1,9 +1,0 @@
-[
-    {
-        "category": "gas",
-        "amount": 100.0,
-        "date": "2024-09-17",
-        "description": "shell",
-        "id": "expense_1726610620"
-    }
-]
