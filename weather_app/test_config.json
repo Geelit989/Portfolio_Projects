@@ -1,0 +1,10 @@
+{
+    "to phone number": "+11234567890",
+	"send phone number": "+11234567890",
+	"job site": ["Detroit", "Chicago", "New York"],
+	"rain fall probability": [0.50, 0.50, 0.50],
+	"rain fall amount": [0.10, 0.10, 0.10],
+	"lat": [42.3314, 41.8781, 40.7128],
+	"lon": [-83.0458, -87.6298, -74.0060],
+	"periodicity": [24]
+}

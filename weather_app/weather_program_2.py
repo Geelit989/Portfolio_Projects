@@ -22,13 +22,35 @@ class WeatherApp:
         """
         self.config_file = config_file
         self.config = self.load_config()
+        self.twilio_client = self.initiate_twilio_client()
+        self.yahoo_user = os.getenv('YMAIL_USER')
+        self.yahoo_password = os.getenv('YMAIL_KEY')
+
 
     def load_config(self):
         """
         Load configuration from the specified JSON file.
         """
-        with open(self.config_file) as config_file:
-            return json.load(config_file)
+        try:
+            with open(self.config_file) as config_file:
+                return json.load(config_file)
+        except Exception as e:
+            print(f"Error loading config: {e}")
+            return None
+        
+        
+    def initiate_twilio_client(self):
+        """
+        Initialize the Twilio client with the account SID and auth token.
+        """
+        try:
+            account_sid = os.environ["TWILIO_ACCOUNT_SID"]
+            auth_token = os.environ["TWILIO_AUTH_TOKEN"]
+            return Client(account_sid, auth_token)
+        except Exception as e:
+            print(f"Error initializing Twilio client: {e}")
+            return None
+        
 
     def get_gridpoint_forecast(self, lat, lon):
         """
@@ -39,6 +61,8 @@ class WeatherApp:
         headers = {
             'User-Agent': '(rainy_season_alerts_app, little.ge@yahoo.com)'
         }
+        # Build functionality that accounts for server timeouts and other errors
+        # Retry the request up to 3 times
 
         try:
             point_response = requests.get(point_url, headers=headers)
@@ -55,6 +79,7 @@ class WeatherApp:
         except Exception as err:
             print(f"Error occurred: {err}")
         return None
+    
 
     def parse_forecast_data(self, forecast_grid_data):
         """
@@ -75,6 +100,7 @@ class WeatherApp:
             parsed_data["quantitative_precipitation"].append(rain.get('value'))
 
         return parsed_data
+    
 
     def summarize_precipitation_to_6hr_intervals(self, data):
         """
@@ -94,6 +120,7 @@ class WeatherApp:
             day_summary[day].append(interval_summary)
 
         return day_summary
+    
 
     def check_rain_conditions(self, day_summary):
         """
@@ -107,6 +134,7 @@ class WeatherApp:
                     alert_days.append(day)
                     break  # No need to check further intervals for this day
         return alert_days
+    
 
     def send_alert(self, to_phone_number, message_body):
         """
@@ -123,6 +151,7 @@ class WeatherApp:
             to=to_phone_number
         )
         print(f"Message sent: {message.sid}")
+
 
     def send_sms_via_yahoo(self, to_number, message_body, yahoo_user, yahoo_password):
         """
@@ -161,6 +190,7 @@ class WeatherApp:
         except Exception as e:
             print(f"Failed to send alert: {e}")
 
+
     def run_daily_check(self):
         """
         Run the weather check for all configured job sites for the next 7 days.
@@ -190,6 +220,7 @@ class WeatherApp:
                     print(f"No rain conditions met for {site} over the next 7 days.")
             else:
                 print(f"Unable to fetch forecast data for {site}.")
+                
 
     def schedule_daily(self):
         """
