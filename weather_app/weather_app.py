@@ -4,7 +4,8 @@ import schedule
 import time
 import json
 import os
-import smtplib
+import logging
+import smtplib 
 from datetime import datetime, timedelta
 from collections import defaultdict
 from email.mime.text import MIMEText
@@ -22,7 +23,7 @@ class WeatherApp:
         """
         self.config_file = config_file
         self.config = self.load_config()
-        self.twilio_client = self.initiate_twilio_client()
+        # self.twilio_client = self.initiate_twilio_client()
         self.yahoo_user = os.getenv('YMAIL_USER')
         self.yahoo_password = os.getenv('YMAIL_KEY')
 
@@ -61,6 +62,12 @@ class WeatherApp:
         headers = {
             'User-Agent': '(rainy_season_alerts_app, little.ge@yahoo.com)'
         }
+        error_messages = {
+        404: "Resource not found. Please check if the latitude and longitude are correct.",
+        500: "Server error. The weather service may be down. Please try again later.",
+        503: "Service unavailable. The weather service is temporarily unavailable."
+        }
+
         # Build functionality that accounts for server timeouts and other errors
         # Retry the request up to 3 times
 
@@ -73,11 +80,22 @@ class WeatherApp:
             forecast_response = requests.get(forecast_url_grid, headers=headers)
             forecast_response.raise_for_status()
             forecast_grid_data = forecast_response.json()['properties']
+            logging.info(f"Successfully retrieved data from {point_url}!")
             return forecast_grid_data
+        except requests.exceptions.Timeout:
+            logging.warning(f'Request to {point_url} timed out! Retrying...')
+            # retry logic here...
         except requests.exceptions.HTTPError as http_err:
-            print(f"HTTP error occurred: {http_err}")
+            status_code = point_response.status_code
+            if status_code in error_messages:
+                logging.error(error_messages[status_code])
+            else:
+                logging.error(f"HTTP error {status_code}: {http_err}")
+        except requests.exceptions.RequestException as req_err:
+            logging.error(f"Network-related error occurred: {req_err}")
         except Exception as err:
             print(f"Error occurred: {err}")
+
         return None
     
 
@@ -118,6 +136,7 @@ class WeatherApp:
                 "total_rainfall": precip
             }
             day_summary[day].append(interval_summary)
+
 
         return day_summary
     
@@ -163,11 +182,8 @@ class WeatherApp:
         :param yahoo_password: The password for the Yahoo email login.
         """
 
-        yahoo_user = os.getenv('YMAIL_USER')
-        yahoo_password = os.getenv('YMAIL_KEY')
-
-        # T-Mobile's email-to-SMS gateway
-        to_email = f"{to_number}@vtext.com" # tmobile= tmomail.net, verizon= vtext.com
+        # Email-to-SMS gateway
+        to_email = f"{to_number}@vtext.com"  # Verizon example; replace for other carriers as needed
 
         # Set up the email
         msg = MIMEMultipart()
@@ -178,17 +194,17 @@ class WeatherApp:
 
         # Yahoo Mail SMTP server details
         smtp_server = 'smtp.mail.yahoo.com'
-        smtp_port = 587 # 465 for SSL or 587 for TLS
+        smtp_port = 587
 
         # Connect to the SMTP server and send the message
         try:
-            with smtplib.SMTP(smtp_server, smtp_port) as server:
-                server.starttls()  # Secure the connection
-                server.login(yahoo_user, yahoo_password)  # Login to Yahoo account
-                server.sendmail(yahoo_user, to_email, msg.as_string())  # Send the email
+            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+                server.login(yahoo_user, yahoo_password)
+                server.sendmail(yahoo_user, to_email, msg.as_string())
                 print("Alert sent successfully!")
         except Exception as e:
             print(f"Failed to send alert: {e}")
+
 
 
     def run_daily_check(self):
@@ -215,7 +231,7 @@ class WeatherApp:
                     )
                     print(message)
                     # Uncomment the line below to send the SMS
-                    # self.send_alert(phone_number, message)
+                    self.send_sms_via_yahoo(phone_number, message, self.yahoo_user, self.yahoo_password)
                 else:
                     print(f"No rain conditions met for {site} over the next 7 days.")
             else:
@@ -237,5 +253,12 @@ class WeatherApp:
 
 
 if __name__ == "__main__":
+    # Set up logging configuration once, ideally at the top of your program
+    logging.basicConfig(
+        filename="weather_app.log", 
+        level=logging.INFO, 
+        format="%(asctime)s - %(levelname)s - %(message)s"
+        )
+    
     prog = WeatherApp("weather_app_config.json")
     prog.run_daily_check()

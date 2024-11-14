@@ -1,7 +1,8 @@
 # test_weather_app.py
 import unittest
+import os
 from weather_app import WeatherApp
-from unittest.mock import patch
+from unittest.mock import patch, ANY
 
 class TestWeatherApp(unittest.TestCase):
 
@@ -72,19 +73,39 @@ class TestWeatherApp(unittest.TestCase):
         self.assertIn('Monday', alert_days, "Monday should be an alert day")
         self.assertNotIn('Tuesday', alert_days, "Tuesday should not be an alert day")
 
-    @patch('smtplib.SMTP')
+
+    @patch('smtplib.SMTP_SSL')
     def test_send_sms_via_yahoo(self, mock_smtp):
-        """
-        Test sending SMS alert via Yahoo email-to-SMS gateway.
-        """
+        # Arrange
         mock_smtp_instance = mock_smtp.return_value
+        mock_smtp_instance.starttls.return_value = None
+        mock_smtp_instance.login.return_value = None
         mock_smtp_instance.sendmail.return_value = {}
 
+        yahoo_user = "test_user@yahoo.com"
+        yahoo_password = "test_password"
         to_number = "1234567890"
         message_body = "Test Alert"
-        result = self.app.send_sms_via_yahoo(to_number, message_body)
-        mock_smtp_instance.sendmail.assert_called_once()
+        to_email = f"{to_number}@vtext.com"
+
+        # Act
+        self.app.send_sms_via_yahoo(
+            to_number,
+            message_body,
+            yahoo_user=yahoo_user,
+            yahoo_password=yahoo_password,
+        )
+
+        # Assert
+        mock_smtp_instance.sendmail.assert_called_once_with(
+            yahoo_user,  # From address
+            to_email,    # To address
+            ANY          # The message as a string
+        )
         print("SMS via Yahoo test passed.")
+
+
+
 
     @classmethod
     def tearDownClass(cls):
