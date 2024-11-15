@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import pandas as pd
 
 
 class WeatherApp:
@@ -115,30 +116,35 @@ class WeatherApp:
         for precip, rain in zip(precip_probability_data, rainfall_data):
             parsed_data["date_time"].append(precip.get('validTime'))
             parsed_data["probability_of_precipitation"].append(precip.get('value'))
-            parsed_data["quantitative_precipitation"].append(rain.get('value'))
-
+            # Safely extract rainfall value, convert mm to inches, and append
+            rain_value = rain.get('value', 0)
+            parsed_data["quantitative_precipitation"].append(rain_value / 25.4)  # Convert mm to inches
         return parsed_data
     
 
     def summarize_precipitation_to_6hr_intervals(self, data):
         """
-        Summarize precipitation data into 6-hour intervals and structure by day.
+        Summarize precipitation data into independent 6-hour intervals.
         """
-        day_summary = defaultdict(list)
+        interval_summary = defaultdict(list)
 
         for dt, precip_prob, precip in zip(data["date_time"], 
-                                           data["probability_of_precipitation"], 
-                                           data["quantitative_precipitation"]):
+                                        data["probability_of_precipitation"], 
+                                        data["quantitative_precipitation"]):
+            # Parse the datetime and round it to the nearest 6-hour block
             datetime_obj = datetime.fromisoformat(dt.split('/')[0])
-            day = datetime_obj.strftime('%A')  # Get day of the week
-            interval_summary = {
+            day = datetime_obj.strftime('%A')  # Day of the week for labeling
+
+            # Store each 6-hour interval’s data without summing rainfall across intervals
+            interval_data = {
+                "interval_start": datetime_obj.strftime('%Y-%m-%d %H:%M'),
                 "avg_precip_prob": precip_prob,
                 "total_rainfall": precip
             }
-            day_summary[day].append(interval_summary)
 
-
-        return day_summary
+            # Add the interval data for each day
+            interval_summary[day].append(interval_data)
+        return interval_summary
     
 
     def check_rain_conditions(self, day_summary):
@@ -183,7 +189,7 @@ class WeatherApp:
         """
 
         # Email-to-SMS gateway
-        to_email = f"{to_number}@vtext.com"  # Verizon example; replace for other carriers as needed
+        to_email = f"{to_number}@tmomail.net"  # <@vtext.com> <@tmomail.net>
 
         # Set up the email
         msg = MIMEMultipart()
@@ -198,7 +204,8 @@ class WeatherApp:
 
         # Connect to the SMTP server and send the message
         try:
-            with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
                 server.login(yahoo_user, yahoo_password)
                 server.sendmail(yahoo_user, to_email, msg.as_string())
                 print("Alert sent successfully!")
@@ -227,11 +234,12 @@ class WeatherApp:
                     message = (
                         f"Rain Alert: The following days at {site} have a forecasted rain chance:\n" +
                         "\n".join([f"{day} - 50%+ chance of rain with 0.10+ inches expected" for day in alert_days]) +
-                        "\nRemember to create the rain event report!"
+                        "\nRemember to create the rain event report!" +
+                        "\nThis is an automated message, from an unmonitored inbox. <3"
                     )
                     print(message)
                     # Uncomment the line below to send the SMS
-                    self.send_sms_via_yahoo(phone_number, message, self.yahoo_user, self.yahoo_password)
+                    # self.send_sms_via_yahoo(phone_number, message, self.yahoo_user, self.yahoo_password)
                 else:
                     print(f"No rain conditions met for {site} over the next 7 days.")
             else:
